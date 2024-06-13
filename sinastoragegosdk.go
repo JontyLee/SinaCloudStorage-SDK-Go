@@ -3,12 +3,11 @@
 /*
 Golang SDK for 新浪云存储
 
- S3官方API接口文档地址:
+	S3官方API接口文档地址:
 
- 	http://open.sinastorage.com/doc/scs/api
- Contact:
- 	s3storage@sina.com
-
+		http://open.sinastorage.com/doc/scs/api
+	Contact:
+		s3storage@sina.com
 */
 package sinastoragegosdk
 
@@ -21,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -55,16 +53,16 @@ func (scs *SCS) Bucket(name string) *Bucket {
 }
 
 /*
- 快捷ACL
+快捷ACL
 
- 	private 		Bucket和Object 	Owner权限 = FULL_CONTROL，其他人没有任何权限
- 	public-read 		Bucket和Object 	Owner权限 = FULL_CONTROL，GRPS000000ANONYMOUSE权限 = READ
- 	public-read-write 	Bucket和Object 	Owner权限 = FULL_CONTROL，GRPS000000ANONYMOUSE权限 = READ + WRITE
- 	authenticated-read 	Bucket和Object 	Owner权限 = FULL_CONTROL，GRPS0000000CANONICAL权限 = READ
+	private 		Bucket和Object 	Owner权限 = FULL_CONTROL，其他人没有任何权限
+	public-read 		Bucket和Object 	Owner权限 = FULL_CONTROL，GRPS000000ANONYMOUSE权限 = READ
+	public-read-write 	Bucket和Object 	Owner权限 = FULL_CONTROL，GRPS000000ANONYMOUSE权限 = READ + WRITE
+	authenticated-read 	Bucket和Object 	Owner权限 = FULL_CONTROL，GRPS0000000CANONICAL权限 = READ
 
- 	GRPS0000000CANONICAL：此组表示所有的新浪云存储注册帐户。所有的请求必须签名（认证），如果签名认证通过，即可按照已设置的权限规则进行访问。
- 	GRPS000000ANONYMOUSE：匿名用户组，对应的请求可以不带签名。
- 	SINA000000000000IMGX：图片处理服务，将您的bucket的ACL设置为对SINA000000000000IMGX的读写权限，在您使用图片处理服务的时候可以免签名。
+	GRPS0000000CANONICAL：此组表示所有的新浪云存储注册帐户。所有的请求必须签名（认证），如果签名认证通过，即可按照已设置的权限规则进行访问。
+	GRPS000000ANONYMOUSE：匿名用户组，对应的请求可以不带签名。
+	SINA000000000000IMGX：图片处理服务，将您的bucket的ACL设置为对SINA000000000000IMGX的读写权限，在您使用图片处理服务的时候可以免签名。
 */
 type ACL string
 
@@ -325,7 +323,7 @@ func (b *Bucket) Put(object, uploadFile string, acl ACL) error {
 	if acl == "" {
 		acl = Private
 	}
-	data, err := ioutil.ReadFile(uploadFile)
+	data, err := os.ReadFile(uploadFile)
 	if err != nil {
 		return err
 	}
@@ -338,7 +336,7 @@ func (b *Bucket) PutWithMime(object, uploadFile string, acl ACL, contentType str
 	if acl == "" {
 		acl = Private
 	}
-	data, err := ioutil.ReadFile(uploadFile)
+	data, err := os.ReadFile(uploadFile)
 	if err != nil {
 		return err
 	}
@@ -361,7 +359,7 @@ func (b *Bucket) PutExpire(object, uploadFile string, acl ACL, expire time.Time)
 	if acl == "" {
 		acl = Private
 	}
-	data, err := ioutil.ReadFile(uploadFile)
+	data, err := os.ReadFile(uploadFile)
 	if err != nil {
 		return err
 	}
@@ -428,7 +426,7 @@ func (b *Bucket) PutSsk(object, uploadFile string, acl ACL) (string, error) {
 	if acl == "" {
 		acl = Private
 	}
-	data, err := ioutil.ReadFile(uploadFile)
+	data, err := os.ReadFile(uploadFile)
 	if err != nil {
 		return "", err
 	}
@@ -477,7 +475,7 @@ func (b *Bucket) Relax(object, uploadFile string, acl ACL) error {
 	if acl == "" {
 		acl = Private
 	}
-	data, err := ioutil.ReadFile(uploadFile)
+	data, err := os.ReadFile(uploadFile)
 	if err != nil {
 		return err
 	}
@@ -696,7 +694,7 @@ func (scs *SCS) query(req *request) (data []byte, err error) {
 	if err != nil || hresp == nil {
 		return nil, err
 	}
-	data, err = ioutil.ReadAll(hresp.Body)
+	data, err = io.ReadAll(hresp.Body)
 	hresp.Body.Close()
 	return data, err
 }
@@ -773,7 +771,7 @@ func (scs *SCS) run(req *request) (hresp *http.Response, err error) {
 		},
 	}
 	if req.body != nil {
-		hreq.Body = ioutil.NopCloser(req.body)
+		hreq.Body = io.NopCloser(req.body)
 	}
 	hresp, err = htCli.Do(&hreq)
 	if err != nil {
@@ -818,8 +816,8 @@ func contMd5(data []byte) string {
 	return base64.StdEncoding.EncodeToString(md.Sum(nil))
 }
 
-//https://scs.sinacloud.com/doc/scs/guide#limitations
-//https://github.com/SinaCloudStorage/SinaStorage-SDK-Python/blob/2192dc3cb76fb792986242bf7b65e24bda5333b8/sinastorage/utils.py#L135
+// https://scs.sinacloud.com/doc/scs/guide#limitations
+// https://github.com/SinaCloudStorage/SinaStorage-SDK-Python/blob/2192dc3cb76fb792986242bf7b65e24bda5333b8/sinastorage/utils.py#L135
 func urlquote(u string) string {
 	v := make([]string, 0)
 	for _, s := range strings.Split(u, "/") {
