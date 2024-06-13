@@ -23,9 +23,9 @@ type Part struct {
 	ETag       string
 }
 
-//大文件分片上传初始化，返回Multi类
-//注意：在初始化上传接口中要求必须进行用户认证，匿名用户无法使用该接口
-//在初始化上传时需要给定文件上传所需要的meta绑定信息，在后续的上传中该信息将被保留，并在最终完成时写入云存储系统
+// 大文件分片上传初始化，返回Multi类
+// 注意：在初始化上传接口中要求必须进行用户认证，匿名用户无法使用该接口
+// 在初始化上传时需要给定文件上传所需要的meta绑定信息，在后续的上传中该信息将被保留，并在最终完成时写入云存储系统
 func (b *Bucket) InitMulti(object string) (*Multi, error) {
 	var bodyTmp interface{}
 	params := map[string][]string{
@@ -133,7 +133,7 @@ func doPut(job Job, JobResultChan chan Part, JobResultErrorChan chan error) {
 	JobResultChan <- part
 }
 
-//上传分片, 注意：分片数不能超过2048
+// 上传分片, 注意：分片数不能超过2048
 func (m *Multi) PutPart(uploadFile string, acl ACL, partSize int) ([]Part, error) {
 	fd, err := os.Open(uploadFile)
 	if err != nil {
@@ -149,9 +149,15 @@ func (m *Multi) PutPart(uploadFile string, acl ACL, partSize int) ([]Part, error
 		return nil, err
 	}
 	fileSize := fi.Size()
-	pieceCount := int(math.Ceil(float64(fileSize) / float64(partSize)))
-	if pieceCount > 2048 {
-		return nil, fmt.Errorf("too many pieces number, max 2048")
+	var pieceCount int
+	if partSize == 0 {
+		pieceCount = 2048
+		partSize = int(math.Ceil(float64(fileSize) / float64(2000)))
+	} else {
+		pieceCount = int(math.Ceil(float64(fileSize) / float64(partSize)))
+		if pieceCount > 2048 {
+			return nil, fmt.Errorf("too many pieces number, max 2048")
+		}
 	}
 	Concurrency := 5
 
@@ -191,7 +197,7 @@ func (m *Multi) PutPart(uploadFile string, acl ACL, partSize int) ([]Part, error
 	return partInfo, nil
 }
 
-//列出已经上传的所有分片信息
+// 列出已经上传的所有分片信息
 func (m *Multi) ListPart() ([]Part, error) {
 	var partsInfo []Part
 	params := map[string][]string{
@@ -219,7 +225,7 @@ func (m *Multi) ListPart() ([]Part, error) {
 	return partsInfo, nil
 }
 
-//大文件分片上传拼接（合并）
+// 大文件分片上传拼接（合并）
 func (m *Multi) Complete(partInfo []Part) error {
 	partsJ, err := json.Marshal(partInfo)
 	if err != nil {

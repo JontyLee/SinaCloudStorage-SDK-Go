@@ -14,7 +14,7 @@ import (
 
 // 路由列表
 var config = map[string]*cli.Command{
-	"upload": {
+	"put": {
 		Usage: "上传文件",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -24,7 +24,7 @@ var config = map[string]*cli.Command{
 				Aliases:  []string{"obj"},
 			},
 			&cli.StringFlag{
-				Name:     "local_patch",
+				Name:     "local_path",
 				Usage:    "",
 				Required: true,
 				Aliases:  []string{"lp"},
@@ -40,21 +40,66 @@ var config = map[string]*cli.Command{
 		Action: func(ctx context.Context, cli *cli.Command) error {
 			obj := cli.String("object")
 			acl := sinastoragegosdk.ACL(cli.String("acl"))
-			localPatch := cli.String("local_patch")
-			err := newBucket(cli).Put(obj, localPatch, acl)
+			localPath := cli.String("local_path")
+			bt := newBucket(cli)
+			multi, err := bt.InitMulti(obj)
+			if err != nil {
+				fmt.Printf("init multi error: %s\n", err.Error())
+				return err
+			}
+
+			partInfo, err := multi.PutPart(localPath, acl, 0)
+			if err != nil {
+				fmt.Printf("put part error: %s\n", err.Error())
+				return err
+			}
+			listPart, err := multi.ListPart()
+			if err != nil {
+				fmt.Printf("list part error: %s\n", err.Error())
+				return err
+			}
+			for k, v := range listPart {
+				if partInfo[k].ETag != v.ETag {
+					return fmt.Errorf("part not match")
+				}
+			}
+			err = multi.Complete(listPart)
+			if err != nil {
+				fmt.Printf("complete error: %s\n", err.Error())
+			}
+			return err
+		},
+	},
+	"get": {
+		Usage: "下载文件",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "object",
+				Usage:    "",
+				Required: true,
+				Aliases:  []string{"obj"},
+			},
+			&cli.StringFlag{
+				Name:     "local_path",
+				Usage:    "",
+				Required: true,
+				Aliases:  []string{"lp"},
+			},
+		},
+		Action: func(ctx context.Context, cli *cli.Command) error {
+			obj := cli.String("object")
+			localPath := cli.String("local_path")
+			err := newBucket(cli).Download(obj, localPath)
 			if err != nil {
 				fmt.Println(err)
 			}
 			return err
 		},
 	},
-	"download": {
-		Usage: "",
-		Flags: []cli.Flag{},
-		Action: func(context.Context, *cli.Command) error {
-			return nil
-		},
-	},
+	"list":   {},
+	"delete": {},
+	"relax":  {},
+	"copy":   {},
 }
 
 // main 入口
@@ -94,7 +139,7 @@ func main() {
 
 	err := cmd.Run(context.Background(), os.Args)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error())
 	}
 }
 
