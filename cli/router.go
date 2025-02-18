@@ -28,6 +28,8 @@ var (
 	acl sinastoragegosdk.ACL
 	// bucket实例
 	bucketInstance *sinastoragegosdk.Bucket
+	// 协议
+	scheme string = "https://"
 )
 
 // 命令定义
@@ -68,11 +70,11 @@ var app = &cli.App{
 		// 	Usage:   "use virtual-host-style URIs (default is path-style)",
 		// 	Aliases: []string{"h"},
 		// },
-		// &cli.BoolFlag{
-		// 	Name:    "unencrypted",
-		// 	Usage:   "unencrypted (use HTTP instead of HTTPS)",
-		// 	Aliases: []string{"u"},
-		// },
+		&cli.BoolFlag{
+			Name:    "unencrypted",
+			Usage:   "unencrypted (use HTTP instead of HTTPS)",
+			Aliases: []string{"u"},
+		},
 		// &cli.BoolFlag{
 		// 	Name:    "show-properties",
 		// 	Usage:   "show response properties on stdout",
@@ -98,8 +100,12 @@ var app = &cli.App{
 		if hostname == "" {
 			return errors.New("hostname is empty")
 		}
+		if c.Bool("unencrypted") {
+			scheme = "http://"
+		}
 		retries = c.Uint("retries")
-		s3 = sinastoragegosdk.NewSCS(accessKey, secretKey, hostname)
+
+		s3 = sinastoragegosdk.NewSCS(accessKey, secretKey, scheme+hostname)
 		return nil
 	},
 }
