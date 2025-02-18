@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
       - name: Checkout codes
         uses: actions/checkout@v4
 
@@ -47,7 +51,7 @@ jobs:
           for PLATFORM in $PLATFORMS; do
             OS=$(echo $PLATFORM | cut -d'/' -f1)
             ARCH=$(echo $PLATFORM | cut -d'/' -f2)
-            OUTPUT_NAME="s3-$OS-$ARCH"
+            OUTPUT_NAME="s3_$OS_$ARCH"
 
             # Windows 添加 .exe 后缀
             if [ "$OS" = "windows" ]; then
@@ -70,12 +74,8 @@ jobs:
           prerelease: false
 
       - name: Upload S3 To Release
-        uses: actions/upload-release-asset@v1
+        run: |
+          # 使用 GitHub CLI 上传每个文件
+          gh release upload ${{ github.ref_name }} ./bin/s3-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./bin/s3-*            # 匹配所有构建的二进制文件
-          asset_name: ${{ split(asset_path, '/')[-1] }}
-          asset_content_type: application/octet-stream
-
