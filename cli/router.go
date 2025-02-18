@@ -32,12 +32,10 @@ var (
 
 // 命令定义
 var app = &cli.App{
-	Name:      "Cli Tool For 新浪云存储 Build With Golang",
-	Usage:     "新浪云存储命令行工具-使用Golang构建",
-	Args:      false,
-	ArgsUsage: "",
-	Version:   "1.0.0",
-	Commands:  router(),
+	Name:     "Cli Tool For 新浪云存储 Build With Golang",
+	Usage:    "新浪云存储命令行工具-使用Golang构建",
+	Version:  "1.0.0",
+	Commands: router(),
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:     "access_key",
