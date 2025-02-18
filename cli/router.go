@@ -259,6 +259,7 @@ var config = map[string]*cli.Command{
 			},
 		},
 		Before: validateBucket,
+		Action: head,
 	},
 	// Todo: 待实现
 	"gqs": {},
