@@ -1,3 +1,9 @@
+/**
+ * List owned buckets or list bucket contents
+ * File  : cli/list.go
+ * Author: JontyLee
+ * Date  : 2025-02-18 11:09:36
+ */
 package main
 
 import (

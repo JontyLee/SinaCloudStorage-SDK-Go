@@ -112,8 +112,9 @@ var config = map[string]*cli.Command{
 		Usage: "Create a new bucket",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "bucket",
-				Usage: "Bucket to create",
+				Name:     "bucket",
+				Usage:    "Bucket to create",
+				Required: true,
 			},
 			&cli.StringFlag{
 				Name:  "cannedAcl",
@@ -170,8 +171,9 @@ var config = map[string]*cli.Command{
 		Usage: "Get the ACL of a bucket or bucket/object",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "bucket",
-				Usage: "Bucket to get the ACL of",
+				Name:     "bucket",
+				Usage:    "Bucket to get the ACL of",
+				Required: true,
 			},
 			&cli.StringFlag{
 				Name:  "object",
@@ -183,16 +185,85 @@ var config = map[string]*cli.Command{
 			},
 		},
 		Before: validateBucket,
-		Action: func(ctx *cli.Context) error {
-			return nil
-		},
+		Action: getacl,
 	},
-	"setacl": {},
-	"put":    {},
-	"copy":   {},
-	"get":    {},
-	"head":   {},
-	"gqs":    {},
+	"put": {
+		Usage: "Puts an object",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "bucket",
+				Usage:    "Bucket to put to",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "object",
+				Usage:    "Bucket object to put to",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "filename",
+				Usage:    "Filename to read source data from",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:  "cannedAcl",
+				Usage: "Canned ACL for the bucket (see Canned ACLs)",
+				Value: string(sinastoragegosdk.Private),
+			},
+			// Todo: 待实现
+			// &cli.StringFlag{
+			// 	Name:  "cacheControl",
+			// 	Usage: "Cache-Control HTTP header string to associate with object",
+			// },
+			// &cli.StringFlag{
+			// 	Name:  "contentType",
+			// 	Usage: "Content-Type HTTP header string to associate with object",
+			// },
+		},
+		Before: validateBucketAcl,
+		Action: put,
+	},
+	// Todo: 待实现
+	"copy": {},
+	"get": {
+		Usage: "Gets an object",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "bucket",
+				Usage:    "Bucket to put to",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "object",
+				Usage:    "Bucket object to put to",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "filename",
+				Usage:    "Filename to read source data from",
+				Required: true,
+			},
+		},
+		Before: validateBucket,
+		Action: put,
+	},
+	"head": {
+		Usage: "Gets only the headers of a bucket or bucket object",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "bucket",
+				Usage:    "Bucket to get the headers of",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:  "object",
+				Usage: "Bucket object to get the headers of",
+			},
+		},
+		Before: validateBucket,
+	},
+	// Todo: 待实现
+	"gqs": {},
 }
 
 // router 生成路由配置
