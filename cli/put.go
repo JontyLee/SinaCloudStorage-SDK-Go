@@ -14,8 +14,8 @@ func put(cliCtx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		// Todo: 默认先使用分片上传，后续优化上传方式及分片数
-		partInfo, err := multi.PutPart(filename, acl, 512)
+		// Todo: 默认先按照1GB一片分片上传，后续优化直接上传及分片计算
+		partInfo, err := multi.PutPart(filename, acl, 1024*1024*1024)
 		if err != nil {
 			return err
 		}
