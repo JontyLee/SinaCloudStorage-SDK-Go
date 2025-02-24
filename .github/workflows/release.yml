@@ -57,7 +57,7 @@ jobs:
           OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}"
           # Windows 添加 .exe 后缀
           if [ "${{ matrix.os }}" = "windows" ]; then
-              // go.mod版本暂不支持
+              # go.mod版本暂不支持
               if [ "${{ matrix.arch }}" = "arm64" ]; then 
                  return
               fi
