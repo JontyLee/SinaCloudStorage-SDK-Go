@@ -11,8 +11,8 @@ import (
 )
 
 var createCmd = &cobra.Command{
-	Use:   "Create a new bucket",
-	Short: "Create ",
+	Use:   "create",
+	Short: "Create a new bucket",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		bucket = args[0]
 		bucketInstance = s3.Bucket(bucket)

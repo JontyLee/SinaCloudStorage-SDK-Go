@@ -24,7 +24,7 @@ var (
 	// 新浪云存储secret_key
 	secretKey string
 	// 指定新浪云存储域名
-	hostname string
+	hostname string = "sinacloud.net"
 	// 是否使用http代替https
 	unencrypted bool
 	// 重试次数
@@ -66,8 +66,8 @@ func validateAcl(options map[string]string) error {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "SCS cli Tool",
-	Short: "Cli Tool For SinaCloudStorage",
+	Use:   "s3",
+	Short: "Cli Tool For SinaCloudStorage-SDK",
 	Long:  `Cli Tool For SinaCloudStorage-SDK Build With Golang`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		accessKey = os.Getenv("S3_ACCESS_KEY_ID")
@@ -108,9 +108,13 @@ func Execute() {
 
 // retry 重试方法
 func retry(f func() error) error {
+	err := f()
+	if err == nil {
+		return nil
+	}
+	fmt.Fprintln(os.Stderr, err)
 	var i uint
-	var err error
-	for i = 0; i <= retries; i++ {
+	for i = 0; i < retries; i++ {
 		fmt.Printf("Start retry %d\n", i)
 		err = f()
 		if err == nil {

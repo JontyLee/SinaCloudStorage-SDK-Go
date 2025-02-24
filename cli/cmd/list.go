@@ -15,10 +15,12 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "Lists owned buckets or list bucket contents",
-	Short: "List",
+	Use:   "list",
+	Short: "Lists owned buckets or list bucket contents",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		bucket = args[0]
+		if len(args) > 0 {
+			bucket = args[0]
+		}
 		bucketInstance = s3.Bucket(bucket)
 		if bucket == "" {
 			return retry(func() error {
