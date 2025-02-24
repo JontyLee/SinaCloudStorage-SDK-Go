@@ -6,7 +6,8 @@ on:
     branches:
       - '**'
     paths:
-      - 'cli/**'  # 仅当 cli 目录有变化时触发
+      - 'cli/**'  
+      - '.github/workflows/**'
   release:
     types: [published]  # 当 Release 发布时触发
 
@@ -14,7 +15,6 @@ jobs:
   build:
     name: Build Multi-Platform Binaries
     runs-on: ubuntu-latest
-    if: contains(github.event.commits[0].modified, 'cli/')  # 检测 cli 目录变更 
 
     strategy:
       matrix:
