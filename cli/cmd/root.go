@@ -89,8 +89,6 @@ var rootCmd = &cobra.Command{
 			scheme = "http://"
 		}
 
-		fmt.Println(scheme + hostname)
-
 		s3 = sinastoragegosdk.NewSCS(accessKey, secretKey, scheme+hostname)
 		return nil
 	},
