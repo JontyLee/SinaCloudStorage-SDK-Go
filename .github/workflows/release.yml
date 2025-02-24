@@ -1,0 +1,97 @@
+name: Multi-Platform Build & Release
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'cli/**'  # 仅当 cli 目录有变化时触发
+  release:
+    types: [published]  # 当 Release 发布时触发
+
+jobs:
+  build:
+    name: Build Multi-Platform Binaries
+    runs-on: ubuntu-latest
+    if: contains(github.event.commits[0].modified, 'cli/')  # 检测 cli 目录变更 
+
+    strategy:
+      matrix:
+        os: [linux, windows, darwin]
+        arch: [amd64, arm64]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get Go Version
+        id: go-version
+        run: |
+          echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Setup Go Version
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ steps.go-version.outputs.version }}
+
+      - name: Setup Version Info
+        id: version_info
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          BUILD_TIME=$(date +%s)
+          GIT_COMMIT=$(git rev-parse HEAD)
+          echo "VERSION=$VERSION"
+          echo "BUILD_TIME=$BUILD_TIME"
+          echo "GIT_COMMIT=$GIT_COMMIT"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+          echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
+      
+      - name: Build Cli S3
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 0
+        run: |
+          cd cli
+          output_name="s3-${{ matrix.os }}-${{ matrix.arch }}"
+          # Windows 添加 .exe 后缀
+          if [ "${{ matrix.os }}" = "windows" ]; then
+              // go.mod版本暂不支持
+              if [ "${{ matrix.arch }}" = "arm64" ]; then 
+                 return
+              fi
+              output_name="$output_name.exe"
+          fi
+          echo "Building ${{output_name}}"
+          mkdir -p bin
+          # 执行构建
+          go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$output_name ./cli
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: s3*
+          path: cli/bin/
+
+  release:
+    name: Create Release
+    needs: build  # 依赖构建任务 
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')  # 仅在创建 tag 时触发
+    
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: bin
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1  # 推荐替代已归档的官方 Action 
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        files: |
+          bin/s3-*
+        draft: false
+        prerelease: false
