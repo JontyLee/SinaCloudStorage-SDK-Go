@@ -28,8 +28,11 @@ jobs:
       - name: Get Go Version
         id: go-version
         run: |
-          echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
-
+          if [ "${{ matrix.os }}" = "windows" && "${{ matrix.arch }}" = "arm64" ]; then
+              echo "version=1.24" >> $GITHUB_OUTPUT
+          elif
+              echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+          fi
       - name: Setup Go Version
         uses: actions/setup-go@v4
         with:
@@ -49,22 +52,20 @@ jobs:
           echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
       
       - name: Build Cli S3
-        if: ${{ matrix.os }} != "windows" && ${{ matrix.arch }} != "arm64"
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
         run: |
-          OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}"
+          OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}-go${{ steps.go-version.outputs.version }}"
           # Windows 添加 .exe 后缀
           if [ "${{ matrix.os }}" = "windows" ]; then
               OUTPUT_NAME="$OUTPUT_NAME.exe"
           fi
           echo "Building $OUTPUT_NAME"
 
-          # 注入环境变量和步骤输出
+          # 注入环境变量
           echo "OUTPUT_NAME=${OUTPUT_NAME}" >> $GITHUB_ENV
-          echo "::set-output name=output_name::${OUTPUT_NAME}"
          
           mkdir -p bin
           # 执行构建
