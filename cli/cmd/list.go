@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listParams = []string{}
-
 var listCmd = &cobra.Command{
 	Use:   "Lists owned buckets or list bucket contents",
 	Short: "List",
