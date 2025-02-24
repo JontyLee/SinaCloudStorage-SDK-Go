@@ -69,23 +69,20 @@ var rootCmd = &cobra.Command{
 	Use:   "SCS cli Tool",
 	Short: "Cli Tool For SinaCloudStorage",
 	Long:  `Cli Tool For SinaCloudStorage-SDK Build With Golang`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		accessKey = os.Getenv("S3_ACCESS_KEY_ID")
 		if accessKey == "" {
-			fmt.Fprintln(os.Stderr, errors.New("must set environment S3_ACCESS_KEY_ID"))
-			os.Exit(1)
+			return errors.New("must set environment S3_ACCESS_KEY_ID")
 		}
 
 		secretKey = os.Getenv("S3_SECRET_ACCESS_KEY")
 		if secretKey == "" {
-			fmt.Fprintln(os.Stderr, errors.New("must set environment S3_SECRET_ACCESS_KEY"))
-			os.Exit(1)
+			return errors.New("must set environment S3_SECRET_ACCESS_KEY")
 		}
 
-		hostname = os.Getenv("S3_HOSTNAME")
-		if hostname == "" {
-			fmt.Fprintln(os.Stderr, errors.New("must set environment S3_HOSTNAME"))
-			os.Exit(1)
+		hostnameEnv := os.Getenv("S3_HOSTNAME")
+		if hostnameEnv != "" {
+			hostname = hostnameEnv
 		}
 
 		if unencrypted {
@@ -93,6 +90,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		s3 = sinastoragegosdk.NewSCS(accessKey, secretKey, scheme+hostname)
+		return nil
 	},
 }
 
@@ -124,6 +122,7 @@ func retry(f func() error) error {
 	return err
 }
 
+// splitArgs 自定义解析变量
 func splitArgs(args []string, startIndex int) map[string]string {
 	res := make(map[string]string, len(args))
 	for i := startIndex; i < len(args); i++ {
