@@ -41,6 +41,7 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           BUILD_TIME=$(date +%s)
           GIT_COMMIT=$(git rev-parse HEAD)
+          EXTENSION=""
           echo "VERSION=$VERSION"
           echo "BUILD_TIME=$BUILD_TIME"
           echo "GIT_COMMIT=$GIT_COMMIT"
@@ -58,6 +59,7 @@ jobs:
           OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}"
           # Windows 添加 .exe 后缀
           if [ "${{ matrix.os }}" = "windows" ]; then
+              EXTENSION=".exe"
               OUTPUT_NAME="$OUTPUT_NAME.exe"
           fi
           echo "Building $OUTPUT_NAME"
@@ -68,7 +70,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: s3*
+          name: s3-${{ matrix.os }}-${{ matrix.arch }}${{EXTENSION}}
           path: bin/
 
   release:
