@@ -41,7 +41,6 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           BUILD_TIME=$(date +%s)
           GIT_COMMIT=$(git rev-parse HEAD)
-          EXTENSION=""
           echo "VERSION=$VERSION"
           echo "BUILD_TIME=$BUILD_TIME"
           echo "GIT_COMMIT=$GIT_COMMIT"
@@ -59,10 +58,14 @@ jobs:
           OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}"
           # Windows 添加 .exe 后缀
           if [ "${{ matrix.os }}" = "windows" ]; then
-              EXTENSION=".exe"
               OUTPUT_NAME="$OUTPUT_NAME.exe"
           fi
           echo "Building $OUTPUT_NAME"
+
+          # 注入环境变量和步骤输出
+          echo "OUTPUT_NAME=${OUTPUT_NAME}" >> $GITHUB_ENV
+          echo "::set-output name=output_name::${OUTPUT_NAME}"
+         
           mkdir -p bin
           # 执行构建
           go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$OUTPUT_NAME ./cli
@@ -70,7 +73,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: s3-${{ matrix.os }}-${{ matrix.arch }}${{EXTENSION}}
+          name: ${{ env.OUTPUT_NAME }}
           path: bin/
 
   release:
