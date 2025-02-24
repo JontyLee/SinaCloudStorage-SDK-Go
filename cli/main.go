@@ -4,7 +4,7 @@
  * Author: jianlin6
  * Date  : 2025-02-24 14:22:59
  */
-package cli
+package main
 
 import "github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/cli/cmd"
 
