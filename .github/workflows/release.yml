@@ -54,19 +54,19 @@ jobs:
           CGO_ENABLED: 0
         run: |
           cd cli
-          output_name="s3-${{ matrix.os }}-${{ matrix.arch }}"
+          OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}"
           # Windows 添加 .exe 后缀
           if [ "${{ matrix.os }}" = "windows" ]; then
               // go.mod版本暂不支持
               if [ "${{ matrix.arch }}" = "arm64" ]; then 
                  return
               fi
-              output_name="$output_name.exe"
+              OUTPUT_NAME="$OUTPUT_NAME.exe"
           fi
-          echo "Building ${{output_name}}"
+          echo "Building $OUTPUT_NAME"
           mkdir -p bin
           # 执行构建
-          go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$output_name ./cli
+          go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$OUTPUT_NAME ./cli
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
