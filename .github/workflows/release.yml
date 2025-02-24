@@ -70,7 +70,7 @@ jobs:
           go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$OUTPUT_NAME ./cli
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: s3*
           path: cli/bin/
@@ -83,7 +83,7 @@ jobs:
     
     steps:
     - name: Download Artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: bin
     
