@@ -6,6 +6,7 @@ on:
       - '**'
     paths:
       - 'cli/**'  # 仅当 cli 目录有变化时触发
+      - '.github/workflows/**'  # Workflow 文件修改触发
   release:
     types: [published]  # 当 Release 发布时触发
 
