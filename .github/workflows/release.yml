@@ -28,7 +28,7 @@ jobs:
       - name: Get Go Version
         id: go-version
         run: |
-          if [[ "${{ matrix.os }}" = "windows" ]] && [["${{ matrix.arch }}" = "arm64" ]]; then
+          if [[ "${{ matrix.os }}" = "windows" ]] && [[ "${{ matrix.arch }}" = "arm64" ]]; then
               echo "version=1.24" >> $GITHUB_OUTPUT
           else
               echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
