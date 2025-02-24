@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -33,12 +34,36 @@ var (
 	// sdk实例
 	s3 *sinastoragegosdk.SCS
 	// 指定acl
-	acl sinastoragegosdk.ACL
+	acl sinastoragegosdk.ACL = sinastoragegosdk.Private
 	// bucket实例
 	bucketInstance *sinastoragegosdk.Bucket
 	// 协议
 	scheme string = "https://"
 )
+
+// 有效的acl列表
+var aclMap = map[sinastoragegosdk.ACL]bool{
+	sinastoragegosdk.Private:           true,
+	sinastoragegosdk.PublicRead:        true,
+	sinastoragegosdk.PublicReadWrite:   true,
+	sinastoragegosdk.AuthenticatedRead: true,
+}
+
+// validateAcl 验证acl
+func validateAcl(options map[string]string) error {
+	acl = sinastoragegosdk.ACL(options["cannedAcl"])
+	if aclMap[acl] {
+		return nil
+	}
+	var aclList []string
+	for aclValidate := range aclMap {
+		aclList = append(aclList, string(aclValidate))
+	}
+	sort.SliceStable(aclList, func(i, j int) bool {
+		return aclList[i] < aclList[j]
+	})
+	return fmt.Errorf("invalid acl: %s, acl must one of %s", acl, strings.Join(aclList, ","))
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "SCS cli Tool",
