@@ -3,8 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -22,6 +25,8 @@ var (
 	retries uint
 	// 指定bucket
 	bucket string
+	// 指定object
+	object string
 	// sdk实例
 	s3 *sinastoragegosdk.SCS
 	// 指定acl
@@ -29,34 +34,38 @@ var (
 	// bucket实例
 	bucketInstance *sinastoragegosdk.Bucket
 	// 协议
-	scheme string = "https://"
+	scheme = "https://"
+	// 输出路径
+	output *os.File
+	// 是否打开了写文件
+	hasWriter bool
 )
 
 // 命令定义
 var app = &cli.App{
-	Name:     "Cli Tool For 新浪云存储 Build With Golang",
+	Name:     "Cli Tool For Sina Cloud Storage Build With Golang",
 	Usage:    "新浪云存储命令行工具-使用Golang构建",
 	Version:  "1.0.0",
 	Commands: router(),
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:     "access_key",
-			Usage:    "新浪云存储access key，优先读取此配置，如无则读取环境变量S3_ACCESS_KEY_ID",
-			Aliases:  []string{"ak"},
+			Usage:    "the access key of Sina Cloud Storage",
+			Aliases:  []string{"a"},
 			Required: true,
 			EnvVars:  []string{"S3_ACCESS_KEY_ID"},
 		},
 		&cli.StringFlag{
 			Name:     "secret_key",
-			Usage:    "新浪云存储secret_key，优先读取此配置，如无则读取环境变量S3_SECRET_ACCESS_KEY",
-			Aliases:  []string{"sk"},
+			Usage:    "the secret_key of Sina Cloud Storage",
+			Aliases:  []string{"s"},
 			Required: true,
 			EnvVars:  []string{"S3_SECRET_ACCESS_KEY"},
 		},
 		&cli.StringFlag{
 			Name:    "hostname",
-			Usage:   "指定新浪云存储域名，优先读取此配置，如无则读取环境变量S3_HOSTNAME",
-			Aliases: []string{"hn"},
+			Usage:   "specify alternative host of Sina Cloud Storage",
+			Aliases: []string{"n"},
 			EnvVars: []string{"S3_HOSTNAME"},
 			Value:   "sinacloud.net",
 		},
@@ -81,174 +90,164 @@ var app = &cli.App{
 		// 	Aliases: []string{"s"},
 		// },
 		&cli.UintFlag{
-			Name:    "retries",
-			Usage:   "retry retryable failures this number of times (default is 5)",
-			Aliases: []string{"r"},
-			Value:   5,
+			Name:        "retries",
+			Usage:       "retry retryable failures this number of times (default is 5)",
+			Aliases:     []string{"r"},
+			Value:       5,
+			Destination: &retries,
 		},
 	},
 	Before: func(c *cli.Context) error {
 		accessKey = c.String("access_key")
-		secretKey = c.String("secret_key")
 		if accessKey == "" {
-			return errors.New("must set environment S3_ACCESS_KEY_ID or parameter access_key")
+			return errors.New("environment S3_ACCESS_KEY_ID or parameter access_key can't be empty")
 		}
+
+		secretKey = c.String("secret_key")
 		if secretKey == "" {
-			return errors.New("must set environment S3_SECRET_ACCESS_KEY or parameter secret_key")
+			return errors.New("environment S3_SECRET_ACCESS_KEY or parameter secret_key can't be empty")
 		}
+
 		hostname = c.String("hostname")
 		if hostname == "" {
-			return errors.New("hostname is empty")
+			return errors.New("environment S3_HOSTNAME or parameter hostname can't be empty")
 		}
+
 		if c.Bool("unencrypted") {
 			scheme = "http://"
 		}
-		retries = c.Uint("retries")
 
 		s3 = sinastoragegosdk.NewSCS(accessKey, secretKey, scheme+hostname)
+		fmt.Fprintf(os.Stdout, "[%s] Starting", time.Now().Format("20060102 15:04:05"))
+		return nil
+	},
+	After: func(ctx *cli.Context) error {
+		fmt.Fprintf(os.Stdout, "[%s] Finished", time.Now().Format("20060102 15:04:05"))
 		return nil
 	},
 }
 
-// 路由列表
+// 子命令列表
 var config = map[string]*cli.Command{
 	"create": {
-		Usage: "Create a new bucket",
+		Usage:     "create a new bucket",
+		ArgsUsage: "[bucket]",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "bucket",
-				Usage:    "Bucket to create",
-				Required: true,
-			},
 			&cli.StringFlag{
 				Name:  "cannedAcl",
 				Usage: "Canned ACL for the bucket (see Canned ACLs)",
 				Value: string(sinastoragegosdk.Private),
 			},
 		},
-		Before: validateBucketAcl,
+		Before: validateBucketObjectAcl,
 		Action: create,
 	},
 	"delete": {
-		Usage: "Delete a bucket or bucket/object",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "bucket",
-				Usage:    "Bucket to delete",
-				Required: true,
-			},
-			&cli.StringFlag{
-				Name:  "object",
-				Usage: "Bucket object to delete, must set parameter bucket at same time",
-			},
-		},
-		Before: validateBucket,
-		Action: delete,
+		Usage:     "delete a bucket or bucket/object",
+		ArgsUsage: "[bucket[/object]]",
+		Before:    validateBucketObject,
+		Action:    delete,
 	},
 	"list": {
-		Usage: "Lists owned buckets or list bucket contents",
+		Usage:     "lists owned buckets or list bucket contents",
+		ArgsUsage: "[bucket]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "bucket",
-				Usage: "Bucket to list",
-			},
-			&cli.StringFlag{
 				Name:  "prefix",
-				Usage: "Prefix for results set",
+				Usage: "prefix for results set",
 			},
 			&cli.StringFlag{
 				Name:  "marker",
-				Usage: "Where in results set to start listing",
+				Usage: "where in results set to start listing",
 			},
 			&cli.StringFlag{
 				Name:  "delimiter",
-				Usage: "Delimiter for rolling up results set",
+				Usage: "delimiter for rolling up results set",
 			},
-			&cli.StringFlag{
+			&cli.IntFlag{
 				Name:  "maxkeys",
-				Usage: "Maximum number of keys to return in results set",
+				Usage: "maximum number of keys to return in results set",
 			},
 		},
 		Action: list,
 	},
 	"getacl": {
-		Usage: "Get the ACL of a bucket or bucket/object",
+		Usage:     "get the ACL of a bucket or bucket/object",
+		ArgsUsage: "[bucket[/object]]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "bucket",
-				Usage:    "Bucket to get the ACL of",
-				Required: true,
-			},
-			&cli.StringFlag{
-				Name:  "object",
-				Usage: "Bucket object to get the ACL of",
-			},
-			&cli.StringFlag{
-				Name:  "filename",
-				Usage: "Output filename for ACL (default is stdout)",
+				Name:        "filename",
+				Usage:       "output filename for ACL",
+				DefaultText: "stdout",
 			},
 		},
-		Before: validateBucket,
+		Before: validateBucketObjectWriter,
 		Action: getacl,
 	},
 	"put": {
-		Usage: "Puts an object",
+		Usage:     "puts an object",
+		ArgsUsage: "[bucket/object]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "bucket",
-				Usage:    "Bucket to put to",
-				Required: true,
+				Name:        "filename",
+				Usage:       "filename to read source data from",
+				Required:    true,
+				DefaultText: "stdin",
 			},
 			&cli.StringFlag{
-				Name:     "object",
-				Usage:    "Bucket object to put to",
-				Required: true,
+				Name:  "contentLength",
+				Usage: "how many bytes of source data to put (required if source file is stdin)",
 			},
 			&cli.StringFlag{
-				Name:     "filename",
-				Usage:    "Filename to read source data from",
-				Required: true,
+				Name:  "cacheControl",
+				Usage: "Cache-Control HTTP header string to associate with object",
+			},
+			&cli.StringFlag{
+				Name:  "contentType",
+				Usage: "Content-Type HTTP header string to associate with object",
+			},
+			&cli.StringFlag{
+				Name:  "md5",
+				Usage: "MD5 for validating source data",
+			},
+			&cli.StringFlag{
+				Name:  "contentDispositionFilename",
+				Usage: "Content-Disposition filename string to associate with object",
+			},
+			&cli.StringFlag{
+				Name:  "contentEncoding",
+				Usage: "Content-Encoding HTTP header string to associate with object",
+			},
+			&cli.StringFlag{
+				Name:  "expires",
+				Usage: "expiration date to associate with object",
 			},
 			&cli.StringFlag{
 				Name:  "cannedAcl",
-				Usage: "Canned ACL for the bucket (see Canned ACLs)",
+				Usage: "canned ACL for the object (see Canned ACLs)",
 				Value: string(sinastoragegosdk.Private),
 			},
-			// Todo: 待实现
-			// &cli.StringFlag{
-			// 	Name:  "cacheControl",
-			// 	Usage: "Cache-Control HTTP header string to associate with object",
-			// },
-			// &cli.StringFlag{
-			// 	Name:  "contentType",
-			// 	Usage: "Content-Type HTTP header string to associate with object",
-			// },
+			&cli.StringSliceFlag{
+				Name:  "metadataHeaders",
+				Usage: "metadata headers to associate with the object",
+			},
 		},
-		Before: validateBucketAcl,
+		Before: validateBucketObjectAcl,
 		Action: put,
 	},
 	// Todo: 待实现
 	"copy": {},
 	"get": {
-		Usage: "Gets an object",
+		Usage:     "Gets an object",
+		ArgsUsage: "[bucket/object]",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "bucket",
-				Usage:    "Bucket to put to",
-				Required: true,
-			},
-			&cli.StringFlag{
-				Name:     "object",
-				Usage:    "Bucket object to put to",
-				Required: true,
-			},
 			&cli.StringFlag{
 				Name:     "filename",
 				Usage:    "Filename to read source data from",
 				Required: true,
 			},
 		},
-		Before: validateBucket,
+		Before: validateBucketObject,
 		Action: put,
 	},
 	"head": {
@@ -264,7 +263,7 @@ var config = map[string]*cli.Command{
 				Usage: "Bucket object to get the headers of",
 			},
 		},
-		Before: validateBucket,
+		Before: validateBucketObject,
 		Action: head,
 	},
 	// Todo: 待实现
@@ -304,22 +303,58 @@ func validateAcl(cliCtx *cli.Context) error {
 	return fmt.Errorf("invalid acl: %s, acl must one of %s", acl, strings.Join(aclList, ","))
 }
 
-// validateBucket 验证bucket
-func validateBucket(cliCtx *cli.Context) error {
-	bucket = cliCtx.String("bucket")
+// validateBucketObject 验证bucket
+func validateBucketObject(cliCtx *cli.Context) error {
+	args := strings.SplitN(cliCtx.Args().First(), "/", 2)
+	if len(args) == 1 {
+		bucket = args[0]
+	} else if len(args) == 2 {
+		bucket = args[0]
+		object = args[1]
+	}
 	if bucket == "" {
-		return errors.New("must set parameter bucket")
+		return errors.New("parameter bucket can't be empty")
 	}
 	bucketInstance = s3.Bucket(bucket)
 	return nil
 }
 
-// validateBucketAcl 验证bucket以及acl
-func validateBucketAcl(cliCtx *cli.Context) error {
-	if err := validateBucket(cliCtx); err != nil {
+// validateWriter 验证输出路径
+func validateWriter(cliCtx *cli.Context) error {
+	filename := cliCtx.String("filename")
+	var err error
+	if filename == "" {
+		output = os.Stdout
+	} else {
+		if err = os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+			return err
+		}
+		output, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o755)
+		if err != nil {
+			return err
+		}
+		hasWriter = true
+	}
+	return nil
+}
+
+// validateBucketObjectAcl 验证bucket以及acl
+func validateBucketObjectAcl(cliCtx *cli.Context) error {
+	if err := validateBucketObject(cliCtx); err != nil {
 		return err
 	}
 	if err := validateAcl(cliCtx); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateBucketObjectWriter 验证bucket,bucket/object及filename
+func validateBucketObjectWriter(cliCtx *cli.Context) error {
+	if err := validateBucketObject(cliCtx); err != nil {
+		return err
+	}
+	if err := validateWriter(cliCtx); err != nil {
 		return err
 	}
 	return nil
@@ -331,17 +366,17 @@ func retry(cliCtx *cli.Context, f cli.ActionFunc) error {
 	if err == nil {
 		return nil
 	}
-	fmt.Println(err.Error())
+	fmt.Fprintln(os.Stderr, err)
 	if retries > 0 {
 		var i uint
 		for i = 1; i <= retries; i++ {
-			fmt.Printf("Start retry %d\n", i)
+			fmt.Fprintf(os.Stdout, "Start retry %d\n", i)
 			err := f(cliCtx)
 			if err == nil {
 				return nil
 			}
 		}
-		fmt.Println("All retries failed")
+		fmt.Fprintln(os.Stderr, "All retries failed")
 	}
 	return nil
 }

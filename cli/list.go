@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 )
@@ -21,7 +22,7 @@ func list(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%s\n", data)
+			fmt.Fprintf(os.Stdout, "%s\n", data)
 			return nil
 		})
 	}
@@ -34,7 +35,7 @@ func list(cliCtx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s\n", data)
+		fmt.Fprintf(os.Stdout, "%s\n", data)
 		return nil
 	})
 }

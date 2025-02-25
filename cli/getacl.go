@@ -13,23 +13,25 @@ import (
 )
 
 func getacl(cliCtx *cli.Context) error {
-	obj := cliCtx.String("object")
-	if obj == "" {
+	if hasWriter {
+		defer output.Close()
+	}
+	if object == "" {
 		return retry(cliCtx, func(ctx *cli.Context) error {
 			data, err := bucketInstance.GetBucketInfo("acl")
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%s\n", data)
+			fmt.Fprintf(output, "%s\n", data)
 			return nil
 		})
 	}
 	return retry(cliCtx, func(ctx *cli.Context) error {
-		data, err := bucketInstance.GetInfo(obj, "acl")
+		data, err := bucketInstance.GetInfo(object, "acl")
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s\n", data)
+		fmt.Fprintf(output, "%s\n", data)
 		return nil
 	})
 }
