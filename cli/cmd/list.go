@@ -1,7 +1,7 @@
 /**
  * 获取文件列表
  * File  : cli/cmd/list.go
- * Author: jianlin6
+ * Author: JontyLee
  * Date  : 2025-02-24 14:26:30
  */
 package cmd
@@ -9,7 +9,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -17,7 +16,9 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Lists owned buckets or list bucket contents",
+	Args:  cobra.RangeArgs(0, 1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var bucket string
 		if len(args) > 0 {
 			bucket = args[0]
 		}
@@ -32,18 +33,6 @@ var listCmd = &cobra.Command{
 				return nil
 			})
 		}
-		options := splitArgs(args, 1)
-		prefix := options["prefix"]
-		delimiter := options["delimiter"]
-		marker := options["marker"]
-		var maxKeys int
-		if options["maxKeys"] != "" {
-			var errMaxKeys error
-			maxKeys, errMaxKeys = strconv.Atoi(options["maxKeys"])
-			if errMaxKeys != nil {
-				return errMaxKeys
-			}
-		}
 		return retry(func() error {
 			data, err := bucketInstance.ListObject(prefix, delimiter, marker, maxKeys)
 			if err != nil {
@@ -56,5 +45,10 @@ var listCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "prefix for results set")
+	rootCmd.Flags().StringVarP(&marker, "marker", "k", "", "where in results set to start listing")
+	rootCmd.Flags().StringVarP(&delimiter, "delimiter", "d", "", "delimiter for rolling up results set")
+	rootCmd.Flags().IntVarP(&maxKeys, "maxKeys", "m", 0, "maximum number of keys to return in results set")
+
 	rootCmd.AddCommand(listCmd)
 }

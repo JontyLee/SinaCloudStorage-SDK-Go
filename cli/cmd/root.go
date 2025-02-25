@@ -1,7 +1,7 @@
 /**
  * 主命令定义
  * File  : cmd/root.go
- * Author: jianlin6
+ * Author: JontyLee
  * Date  : 2025-02-24 14:55:00
  */
 package cmd
@@ -29,16 +29,26 @@ var (
 	unencrypted bool
 	// 重试次数
 	retries uint
-	// 指定bucket
-	bucket string
 	// sdk实例
 	s3 *sinastoragegosdk.SCS
-	// 指定acl
-	acl sinastoragegosdk.ACL = sinastoragegosdk.Private
+	// 指定cannedAcl
+	cannedAcl string
+	// 使用的acl
+	acl sinastoragegosdk.ACL
 	// bucket实例
 	bucketInstance *sinastoragegosdk.Bucket
 	// 协议
 	scheme string = "https://"
+	// 查询前缀
+	prefix string
+	// 查询开始位置
+	marker string
+	// 分隔符设置
+	delimiter string
+	// 最大返回数量
+	maxKeys int
+	// 本地文件
+	filename string
 )
 
 // 有效的acl列表
@@ -50,8 +60,7 @@ var aclMap = map[sinastoragegosdk.ACL]bool{
 }
 
 // validateAcl 验证acl
-func validateAcl(options map[string]string) error {
-	acl = sinastoragegosdk.ACL(options["cannedAcl"])
+func validateAcl(acl sinastoragegosdk.ACL) error {
 	if aclMap[acl] {
 		return nil
 	}
@@ -95,8 +104,8 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.LocalFlags().UintVarP(&retries, "retries", "r", 5, "retry retryable failures this number of times")
-	rootCmd.LocalFlags().BoolVarP(&unencrypted, "unencrypted", "u", false, "use HTTP instead of HTTPS")
+	rootCmd.Flags().UintVarP(&retries, "retries", "r", 5, "retry retryable failures this number of times")
+	rootCmd.Flags().BoolVarP(&unencrypted, "unencrypted", "u", false, "use HTTP instead of HTTPS")
 }
 
 func Execute() {
@@ -126,17 +135,11 @@ func retry(f func() error) error {
 	return err
 }
 
-// splitArgs 自定义解析变量
-func splitArgs(args []string, startIndex int) map[string]string {
-	res := make(map[string]string, len(args))
-	for i := startIndex; i < len(args); i++ {
-		if args[i] == "" {
-			continue
-		}
-		argSlice := strings.Split(args[i], "=")
-		if len(argSlice) > 1 && argSlice[0] != "" && argSlice[1] != "" {
-			res[argSlice[0]] = res[argSlice[1]]
-		}
+// checkAcl 检查acl是否符合预期
+func checkAcl(cmd *cobra.Command, args []string) error {
+	acl = sinastoragegosdk.ACL(cannedAcl)
+	if err := validateAcl(acl); err != nil {
+		return err
 	}
-	return res
+	return nil
 }
