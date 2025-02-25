@@ -1,0 +1,81 @@
+name: Cli S3 Build & Release
+
+on:
+  push:
+    tags: [ "v*" ]  # 仅通过标签触发发布
+
+jobs:
+  build-and-release:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+      - name: Checkout codes
+        uses: actions/checkout@v4
+
+      - name: Get Go Version
+        id: go-version
+        run: |
+          echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Setup Go Version
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ steps.go-version.outputs.version }}
+
+      - name: Setup Version Info
+        id: version_info
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          BUILD_TIME=$(date +%s)
+          GIT_COMMIT=$(git rev-parse HEAD)
+          echo "VERSION=$VERSION"
+          echo "BUILD_TIME=$BUILD_TIME"
+          echo "GIT_COMMIT=$GIT_COMMIT"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+          echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
+
+      - name: Build Cli S3
+        env:
+          CGO_ENABLED: 0
+        run: |
+          # 定义目标平台列表 (OS/Arch)
+          PLATFORMS="linux/amd64 linux/arm64 windows/amd64 darwin/amd64 darwin/arm64"
+
+          # 遍历所有平台并构建
+          for PLATFORM in $PLATFORMS; do
+            OS=$(echo $PLATFORM | cut -d'/' -f1)
+            ARCH=$(echo $PLATFORM | cut -d'/' -f2)
+            OUTPUT_NAME="s3-$OS-$ARCH"
+
+            # Windows 添加 .exe 后缀
+            if [ "$OS" = "windows" ]; then
+              OUTPUT_NAME="$OUTPUT_NAME.exe"
+            fi
+            echo "Building $OS-$ARCH"
+
+            # 执行构建
+            GOOS=$OS GOARCH=$ARCH  go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$OUTPUT_NAME ./cli
+          done
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}          # 使用触发的标签（如 `refs/tags/v1.0.0`）
+          release_name: Release ${{ github.ref_name }}  # 直接使用标签名（如 `v1.0.0`）
+          draft: false
+          prerelease: false
+
+      - name: Upload S3 To Release
+        run: |
+          # 使用 GitHub CLI 上传每个文件
+          gh release upload ${{ github.ref_name }} ./bin/s3-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
