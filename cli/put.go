@@ -7,10 +7,9 @@ import (
 )
 
 func put(cliCtx *cli.Context) error {
-	obj := cliCtx.String("object")
 	filename := cliCtx.String("filename")
 	return retry(cliCtx, func(ctx *cli.Context) error {
-		multi, err := bucketInstance.InitMulti(obj)
+		multi, err := bucketInstance.InitMulti(object)
 		if err != nil {
 			return err
 		}
@@ -36,7 +35,7 @@ func put(cliCtx *cli.Context) error {
 		if expires := cliCtx.String("expires"); expires != "" {
 			meta["x-sina-expire"] = expires
 		}
-		if errPutMeta := bucketInstance.PutMeta(obj, meta); errPutMeta != nil {
+		if errPutMeta := bucketInstance.PutMeta(object, meta); errPutMeta != nil {
 			fmt.Println(errPutMeta.Error())
 		}
 		return nil

@@ -1,27 +1,38 @@
-name: Cli S3 Build & Release
+name: S3 Cli Build & Release
 
 on:
+  workflow_dispatch:
   push:
-    tags: [ "v*" ]  # 仅通过标签触发发布
+    branches:
+      - '**'
+    paths:
+      - 'cli/**'  
+      - '.github/workflows/**'
+  release:
+    types: [published]  # 当 Release 发布时触发
 
 jobs:
-  build-and-release:
-    name: Build and Publish
+  build:
+    name: Build && Release
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        os: [linux, darwin, windows]
+        arch: [amd64, arm64]
+    
     steps:
-      - name: Install GitHub CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
-      - name: Checkout codes
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Get Go Version
         id: go-version
         run: |
-          echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
-
+          if [[ "${{ matrix.os }}" = "windows" ]] && [[ "${{ matrix.arch }}" = "arm64" ]]; then
+              echo "version=1.24" >> $GITHUB_OUTPUT
+          else
+              echo "version=$(grep '^go' go.mod | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+          fi
       - name: Setup Go Version
         uses: actions/setup-go@v4
         with:
@@ -39,43 +50,51 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
-
+      
       - name: Build Cli S3
         env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
         run: |
-          # 定义目标平台列表 (OS/Arch)
-          PLATFORMS="linux/amd64 linux/arm64 windows/amd64 darwin/amd64 darwin/arm64"
-
-          # 遍历所有平台并构建
-          for PLATFORM in $PLATFORMS; do
-            OS=$(echo $PLATFORM | cut -d'/' -f1)
-            ARCH=$(echo $PLATFORM | cut -d'/' -f2)
-            OUTPUT_NAME="s3-$OS-$ARCH"
-
-            # Windows 添加 .exe 后缀
-            if [ "$OS" = "windows" ]; then
+          OUTPUT_NAME="s3-${{ matrix.os }}-${{ matrix.arch }}-go${{ steps.go-version.outputs.version }}"
+          # Windows 添加 .exe 后缀
+          if [ "${{ matrix.os }}" = "windows" ]; then
               OUTPUT_NAME="$OUTPUT_NAME.exe"
-            fi
-            echo "Building $OS-$ARCH"
+          fi
+          echo "Building $OUTPUT_NAME"
 
-            # 执行构建
-            GOOS=$OS GOARCH=$ARCH  go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$OUTPUT_NAME ./cli
-          done
+          # 注入环境变量
+          echo "OUTPUT_NAME=${OUTPUT_NAME}" >> $GITHUB_ENV
+         
+          mkdir -p bin
+          # 执行构建
+          go build -ldflags "-X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.Ver=${VERSION}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.BuildTime=${BUILD_TIME}' -X 'github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/action.GitCommit=${GIT_COMMIT}'" -o ./bin/$OUTPUT_NAME ./cli
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ github.ref }}          # 使用触发的标签（如 `refs/tags/v1.0.0`）
-          release_name: Release ${{ github.ref_name }}  # 直接使用标签名（如 `v1.0.0`）
-          draft: false
-          prerelease: false
+          name: ${{ env.OUTPUT_NAME }}
+          path: bin/
 
-      - name: Upload S3 To Release
-        run: |
-          # 使用 GitHub CLI 上传每个文件
-          gh release upload ${{ github.ref_name }} ./bin/s3-*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    name: Create Release
+    needs: build  # 依赖构建任务 
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')  # 仅在创建 tag 时触发
+    
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: bin
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1  # 推荐替代已归档的官方 Action 
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        files: |
+          bin/s3-*
+        draft: false
+        prerelease: false
