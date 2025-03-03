@@ -4,7 +4,7 @@
  * Author: JontyLee
  * Date  : 2025-02-17 19:59:06
  */
-package main
+package cmd
 
 import (
 	"fmt"

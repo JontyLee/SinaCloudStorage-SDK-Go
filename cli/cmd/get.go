@@ -4,7 +4,7 @@
  * Author: JontyLee
  * Date  : 2025-02-18 14:23:54
  */
-package main
+package cmd
 
 import (
 	"github.com/urfave/cli/v2"
