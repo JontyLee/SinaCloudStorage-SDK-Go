@@ -251,18 +251,7 @@ var config = map[string]*cli.Command{
 		Action: put,
 	},
 	"head": {
-		Usage: "Gets only the headers of a bucket or bucket object",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "bucket",
-				Usage:    "Bucket to get the headers of",
-				Required: true,
-			},
-			&cli.StringFlag{
-				Name:  "object",
-				Usage: "Bucket object to get the headers of",
-			},
-		},
+		Usage:  "Gets only the headers of a bucket or bucket object",
 		Before: validateBucketObject,
 		Action: head,
 	},

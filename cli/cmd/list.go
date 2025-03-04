@@ -14,7 +14,7 @@ import (
 )
 
 func list(cliCtx *cli.Context) error {
-	bucket = cliCtx.String("bucket")
+	bucket := cliCtx.Args().First()
 	bucketInstance = s3.Bucket(bucket)
 	if bucket == "" {
 		return retry(cliCtx, func(ctx *cli.Context) error {
