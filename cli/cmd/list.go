@@ -14,6 +14,7 @@ import (
 )
 
 func list(cliCtx *cli.Context) error {
+	fmt.Fprintf(os.Stdout, "args: %+v\n", cliCtx.Args().Slice())
 	bucket := cliCtx.Args().First()
 	bucketInstance = s3.Bucket(bucket)
 	if bucket == "" {
