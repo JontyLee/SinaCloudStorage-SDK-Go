@@ -294,7 +294,10 @@ func validateAcl(cliCtx *cli.Context) error {
 
 // validateBucketObject 验证bucket
 func validateBucketObject(cliCtx *cli.Context) error {
-	args := strings.SplitN(cliCtx.Args().First(), "/", 2)
+	bucketObj := cliCtx.Args().First()
+	fmt.Fprintf(os.Stdout, "bucket/object: %s\n", bucketObj)
+
+	args := strings.SplitN(bucketObj, "/", 2)
 	if len(args) == 1 {
 		bucket = args[0]
 	} else if len(args) == 2 {
@@ -304,9 +307,9 @@ func validateBucketObject(cliCtx *cli.Context) error {
 	if bucket == "" {
 		return errors.New("parameter bucket can't be empty")
 	}
-	fmt.Fprintf(os.Stdout, "bucket: %s", bucket)
+	fmt.Fprintf(os.Stdout, "bucket: %s\n", bucket)
 	if object != "" {
-		fmt.Fprintf(os.Stdout, "object: %s", object)
+		fmt.Fprintf(os.Stdout, "object: %s\n", object)
 	}
 	bucketInstance = s3.Bucket(bucket)
 	return nil
