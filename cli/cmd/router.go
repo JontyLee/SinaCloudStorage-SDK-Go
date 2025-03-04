@@ -296,6 +296,7 @@ func validateAcl(cliCtx *cli.Context) error {
 func validateBucketObject(cliCtx *cli.Context) error {
 	bucketObj := cliCtx.Args().First()
 	fmt.Fprintf(os.Stdout, "bucket/object: %s\n", bucketObj)
+	fmt.Fprintf(os.Stdout, "args: %+v\n", cliCtx.Args().Slice())
 
 	args := strings.SplitN(bucketObj, "/", 2)
 	if len(args) == 1 {
