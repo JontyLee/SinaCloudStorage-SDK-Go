@@ -91,7 +91,7 @@ var S3 = &cli.App{
 		// },
 		&cli.UintFlag{
 			Name:        "retries",
-			Usage:       "retry retryable failures this number of times (default is 5)",
+			Usage:       "retry retryable failures this number of times",
 			Aliases:     []string{"r"},
 			Value:       5,
 			Destination: &retries,
@@ -118,7 +118,7 @@ var S3 = &cli.App{
 		}
 
 		s3 = sinastoragegosdk.NewSCS(accessKey, secretKey, scheme+hostname)
-		fmt.Fprintf(os.Stdout, "[%s] Starting", time.Now().Format("20060102 15:04:05"))
+		fmt.Fprintf(os.Stdout, "[%s] Starting\n", time.Now().Format("20060102 15:04:05"))
 		return nil
 	},
 	After: func(ctx *cli.Context) error {
@@ -303,6 +303,10 @@ func validateBucketObject(cliCtx *cli.Context) error {
 	}
 	if bucket == "" {
 		return errors.New("parameter bucket can't be empty")
+	}
+	fmt.Fprintf(os.Stdout, "bucket: %s", bucket)
+	if object != "" {
+		fmt.Fprintf(os.Stdout, "object: %s", object)
 	}
 	bucketInstance = s3.Bucket(bucket)
 	return nil
