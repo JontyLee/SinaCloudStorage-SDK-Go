@@ -9,11 +9,13 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/SinaCloudStorage/SinaCloudStorage-SDK-Go/cli/cmd"
 )
 
 // APP启动定义
 func main() {
-	err := app.Run(os.Args)
+	err := cmd.S3.Run(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}

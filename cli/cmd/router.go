@@ -42,7 +42,7 @@ var (
 )
 
 // 命令定义
-var app = &cli.App{
+var S3 = &cli.App{
 	Name:     "Cli Tool For Sina Cloud Storage Build With Golang",
 	Usage:    "新浪云存储命令行工具-使用Golang构建",
 	Version:  "1.0.0",
